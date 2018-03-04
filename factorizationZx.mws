@@ -1,0 +1,275 @@
+# -------------------- Metodo de Kronecker -------------------- #
+#Algoritmos previos que utiliza: mcdQx (ver gcd.mws)
+
+with(NumbreTheory);
+with(Student[LinearAlgebra]);
+
+# Calculo de la matriz A
+calculoA := proc (a::Array, e::integer)
+ local dim, result, i, j;
+
+ dim := upperbound(a);
+ result := Matrix(dim, e+1);
+ for i to dim do
+	for j to e+1 do
+		result[i, j] := a[i]^(e-j+1);
+	end do;
+ end do;
+ 
+ result;
+ end proc;
+ 
+ 
+# Calculo del producto cartesiano
+productoCartesiano := proc (s::list)
+ local fil, col, i, M, j, S, ind, result, V, aux;
+
+ fil := nops(s);
+ col := 1;
+ result := {};
+ for i to fil do
+	col := col*numelems(s[i]);
+ end do;
+ M := Matrix(fil, col);
+
+ aux := 1;
+ for i to fil do
+	S := s[i];
+	ind := 0;
+	for j to col do
+		M[i, j] := op(ind+1, S);
+		if `mod`(j, aux) = 0 then
+			ind := `mod`(ind+1, numelems(S));
+		end if;
+	end do;
+	aux := aux*numelems(S);
+ end do;
+
+ for i to col do
+	V := Vector(fil);
+	for j to fil do
+		V[j] := M[j, i];
+ 	end do;
+	result := result union {V};
+ end do;
+
+ result;
+ end proc;
+ 
+ 
+# METODO DE KRONECKER
+kronecker := proc (f::polynom)
+ local a0, a1, M, Me, Maux, c, b, eval0, grado, e, random, g, k, j, neg, MeNeg, a, cont, A, s;
+
+ # Paso 1
+ a0 := 0;
+ a1 := 1;
+ a := Array();
+ s := [];
+ a(1) := a0;
+ a(2) := a1;
+ cont := 3;
+
+ # Paso 2
+ if eval(f, x = a0) = 0 then return x-a0; end if;
+ if eval(f, x = a1) = 0 then return x-a1; end if;
+
+ # Paso 3
+ eval0 := eval(f, x = a0);
+ s := [op(s), Divisors(eval0)];
+
+ # Paso 4
+ grado := degree(f, x);
+ for e to floor((1/2)*grado) do
+	Me := Divisors(eval(f, x = a1));
+	MeNeg := {};
+	for k to numelems(Me) do
+		neg := op(k, Me);
+		neg := -neg;
+		MeNeg := MeNeg union {neg};
+	end do;
+	Me := Me union MeNeg;
+	s := [op(s), Me];
+	Maux := productoCartesiano(s);
+	while Maux <> {} do
+		random := `mod`(rand(), numelems(Maux));
+		random := random+1; c := op(random, Maux);
+		A := calculoA(a, e);
+		b := LinearSolve(A, c);
+		g := 0;
+		for j from 0 to e do
+			g := g+b[e-j+1]*x^j;
+		end do;
+		if b[e] <> 0 and mcdQx(g, f) <> 1 then return g; end if;
+		Maux := Maux minus {c};
+	end do;
+	if 0 < a1 then a1 := -a1;
+	else a1 := -a1+1; end if;
+	a(cont) := a1;
+	cont := cont+1;
+ end do;
+
+ #Paso 5
+ return (f " es irreducible en Q[x]");
+ end proc;
+
+ 
+ 
+# ----------------- Metodo de Modular Approach ----------------- #
+#Algoritmos previos que utiliza: mcdZ, mcdQx, mcdZx, mcdFpx, mcdFqx (ver gcd.mws), mcdFpxExtendido (ver extendedGcd.mws), Berlekamp y sus auxiliares (ver factorizationFqx.mws) testLibreCuadradosZx, testLibreCuadradosFpx, testLibreCuadradosFqx (ver squarefreeTest.mws)
+
+with(PolynomialTools);
+with(LinearAlgebra);
+with(combinat);
+
+# Levantamiento de Hensel
+levHensel := proc (f::polynom, g::polynom, h::polynom, s::polynom, t::polynom, q::integer)
+ local inc, gg, hh, del, tt, ss, result;
+
+ # Hipotesis:
+ # h monico
+ # deg(s mod q)<deg(h mod q), deg(t mod q)<deg(g mod q)
+ # f=g.h mod q
+ # sg+th=1 mod q
+
+ inc := expand(f-g*h);
+ gg := expand(g*(1+quo(s*inc, h, x))+t*inc);
+ hh := expand(h+rem(s*inc, h, x));
+ del := expand(s*gg+t*hh-1);
+ ss := expand(s-rem(s*del, hh, x));
+ tt := expand((1-del)*t-gg*quo(s*del, hh, x));
+
+ result := (`mod`(gg, q^2), `mod`(hh, q^2), `mod`(ss, q^2), `mod`(tt, q^2));
+
+ # Salida
+ # hh es monico
+ # deg(ssmodq`^(2))<deg(hhmodq^(2)), deg(ttmodq^(2))<deg(ggmod^()q^(2))
+ # ss*gg + tt*hh = 1 mod q^2
+ # gg=g mod q, hh=h mod q
+
+ end proc;
+ 
+ 
+# True factors
+factoresCiertos := proc (f::polynom, p::integer, N::integer, g)
+ local h, L, result, d, i, Ind, J, random, aux, S, gBar, gi, potencia;
+
+ h := f;
+ L := lcoeff(f, x);
+ result := {};
+ Ind := {};
+ d := 1;
+ for i to numelems(g) do
+	Ind := Ind union {i};
+ end do;
+
+ while 2*d <= numelems(Ind) do
+	J := {};
+	potencia := powerset(Ind);
+	for i to numelems(potencia) do
+		aux := op(i, potencia);
+		if numelems(aux) = d then J := J union {aux}; end if;
+	end do;
+	while J <> {} do
+		random := (`mod`(rand(), numelems(J)))+1;
+		S := op(random, J);
+		J := J minus {S};
+		gBar := L;
+		for i to numelems(S) do
+			gi := op(op(i, S), g);
+			gBar := `mod`(expand(gBar*gi), p^N);
+		end do;
+
+		if mcdZx(gBar, expand(L*h)) <> 1 then
+			result := result union {primpart(gBar, x)};
+			h := quo(h, primpart(gBar, x), x);
+			Ind := Ind minus S;
+			for i to numelems(J) do
+				aux := op(i, J);
+				if aux intersect S <> {} then J := J minus aux; end if;
+			end do;
+		end if;
+	end do;
+	d := d+1;
+ end do;
+ if 0 < degree(h, x) then result := result union {h}; end if;
+
+ result;
+ end proc;
+ 
+ 
+# MODULAR APPROACH
+modularApproach := proc (f::polynom)
+ local result, lc, primo, irredFpx, norma, N, grado, cota, random, i, g, h, t, s, aux, irredLev, irredAux, primoLev, fLev;
+
+ # Comprobacion de hipotesis
+ if content(f, x) <> 1 then result := "El polinomio no es primitivo";
+ else
+	if testLibreCuadradosZx(f) = 0 then result := "El polinomio no es libre de cuadrados";
+	else
+
+		# Paso 1
+		lc := lcoeff(f, x);
+		if `mod`(lc, 2) = 1 and testLibreCuadradosFpx(f, 2) = 1 then primo := 2;
+		else
+			primo := 3;
+			while mcdZ(lc, primo) <> 1 or testLibreCuadradosFpx(f, primo) = 0 do
+				primo := primo+2;
+				while type(primo, prime) = false do
+					primo := primo+2;
+				end do;
+			end do;
+		end if;
+
+		# Paso 2
+		irredFpx := miBerlekampOpt(f, primo, 1);
+
+		# Paso 3: `coeff(g) in ( `(-1)/(2)primo^(N),1/(2)primo^(N)] con g  factor de f
+		grado := degree(f, x);
+		norma := norm(f, 2);
+		cota := evalf(2^(grado+1)*norma);
+		N := 1;
+		while primo^N < cota do
+			N := 2*N;
+		end do;
+
+		# Paso 4
+		# Tenemos que hacer tantos levantamientos de Hensel como potencias de 2 sea N
+		irredLev := {};
+
+		# Quitamos de la lista los elementos que pertenecen a Z
+		for i from 0 to numelems(irredFpx) do
+			g := op(i, irredFpx);
+			if 1 <= degree(g, x) then irredLev := irredLev union {g}; end if;
+		end do;
+
+		# Hacemos el levantamiento de Hensel tantas veces como sea necesario
+		primoLev := primo;
+		while N <> 1 do
+			fLev := f;
+			irredAux := irredLev;
+			irredLev := {};
+			while 2 <= numelems(irredAux) do
+				g := op(numelems(irredAux), irredAux);
+				irredAux := irredAux minus {g};
+				h := 1;
+				for i to numelems(irredAux) do
+					h := `mod`(expand(h*op(i, irredAux)), primoLev);
+				end do;
+				(aux, s, t) := mcdFpxExtendido(g, h, primoLev, 1);
+				(g, h, s, t) := levHensel(fLev, g, h, s, t, primoLev);
+				irredLev := irredLev union {g};
+				fLev := expand(quo(fLev, g, x));
+			end do;
+			irredLev := irredLev union {h};
+			primoLev := primoLev^2;
+			N := (1/2)*N;
+		end do;
+
+		# Paso 5
+		result := factoresCiertos(f, primo, N, irredLev);
+	end if;
+ end if;
+
+ result;
+ end proc;
