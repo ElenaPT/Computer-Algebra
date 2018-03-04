@@ -1,0 +1,46 @@
+# Test de polinomio libre de cuadrados en Z[x]
+# Algoritmos previos que utiliza: mcdZq (ver gcd.mws)
+testLibreCuadradosZx := proc (f::polynom)
+ local fp, result;
+ 
+ if degree(f, x) = 1 then result := 1;
+ else
+	fp := diff(f, x);
+	result := mcdZx(fp, f);
+	if result = 1 then result := 1;
+	else result := 0; end if;
+ end if;
+
+ result;
+ end proc;
+ 
+ 
+# Test de polinomio libre de cuadrados en Fp[x], p primo
+# Algoritmos previos que utiliza: mcdFpx (ver gcd.mws)
+testLibreCuadradosFpx := proc (f::polynom, p::integer)
+ local fp, result;
+
+ fp := `mod`(diff(f, x), p);
+ result := mcdFpx(fp, f, p);
+
+ if result = 1 then result := 1;
+ else result := 0; end if;
+
+ result;
+ end proc;
+ 
+ 
+# Test de polinomio libre de cuadrados en Fq[x], q=p^n, p primo
+# Algoritmos previos que utiliza: mcdFqx (ver gcd.mws)
+testLibreCuadradosFqx := proc (f::polynom, p::integer, base::polynom)
+ local fp, result;
+
+ fp := `mod`(diff(f, x), p);
+
+ result := mcdFqx(fp, f, p, base);
+
+ if result = 1 then result := 1;
+ else result := 0; end if;
+
+ result;
+ end proc;
