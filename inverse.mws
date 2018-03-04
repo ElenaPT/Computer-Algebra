@@ -1,0 +1,29 @@
+# Algoritmo para el calculo del inverso en Zp
+# Algoritmos previos que utiliza: mcdZextendido (ver extendedGcd.mws)
+inversoZp := proc (n::integer, p::integer)
+ local d, s, t, resultado;
+ d, s, t := mcdZextendido(n, p, 1);
+ if d <> 1 then
+	resultado := "No hay inverso";
+ elif 0 < s then
+	resultado := s;
+ else
+	resultado := p+s;
+ end if;
+ resultado;
+ end proc;
+ 
+
+# Algoritmo para el calculo del inverso en Fq[x]
+# Algoritmos previos que utiliza: mcdFpxExtendido (ver extendedGcd.mws)
+inversoFqx := proc (f::polynom, p::integer, base::polynom)
+ local d, s, t, resultado;
+ d, s, t := mcdFpxExtendido(f, base, p, 1);
+ if d <> 1 then
+	#Solo puede ocurrir si f=0
+	resultado := "No hay inverso";
+ else
+	resultado := `mod`(Rem(s, base, x), p);
+ end if;
+ resultado;
+ end proc;
