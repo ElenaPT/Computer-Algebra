@@ -1,0 +1,16 @@
+# Test de irreducibilidad en Fq[x]
+# Algoritmos previos que utiliza: mcdFpx (ver gcd.mws)
+TestIrreducibilidadFq := proc (f::polynom, q::integer, p::integer)
+ local grado, result, i;
+
+ result := "Es irreducible";
+ grado := degree(f, x);
+
+ for i to grado-1 do
+	if mcdFpx(f, x^(q^i)-x, p) <> 1 then
+		result := "No es irreducible";
+		i := grado;
+	end if;
+ end do;
+ result;
+ end proc;
