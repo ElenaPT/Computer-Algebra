@@ -1,0 +1,77 @@
+# Algoritmo de Shanks en Zp, p primo
+# Algoritmos previos que utiliza: inversoZp (ver inverse.mws), mcdZextendido (ver extendedGcd.mws)
+# g^x=h
+AlgShanksZp := proc (g::integer, h::integer, p::integer)
+ local m, i, alfa, inverso, result, encontrado, bet, vuelta;
+ global lista;
+
+ m := ceil(sqrt(p-1));
+ lista := Matrix(m, 2);
+
+ lista[1, 1] := 1;
+ lista[1, 2] := 0;
+
+ for i to m-1 do
+	alfa := `mod`(g^(i*m), p);
+	lista[i+1, 1] := alfa;
+	lista[i+1, 2] := i;
+ end do;
+
+ inverso := inversoZp(g, p);
+
+ encontrado := m;
+ vuelta := -1;
+
+ while encontrado = m do
+	vuelta := vuelta+1;
+	bet := `mod`(h*inverso^vuelta, p);
+	for i to m do
+		if bet = lista[i, 1] then encontrado := lista[i, 2] end if;
+	end do;
+	if m < vuelta then encontrado := m; end if;
+ end do;
+ result := encontrado*m+vuelta;
+
+ result;
+ end proc;
+ 
+ 
+# Algoritmo de Shanks en Fq[x], q=p^n, p primo
+# Algoritmos previos que utiliza: inversoFqx (ver inverse.mws), mcdFpxExtendido (ver extendedGcd.mws)
+# g^x=h
+AlgShanksFqx := proc (g::polynom, h::polynom, p::integer, base::polynom)
+ local m, i, alfa, inverso, result, encontrado, bet, vuelta, grado;
+ global lista;
+
+ grado := degree(base, x);
+ #El orden de Fq*[x] es p^grado-1 (hay que restarle otro)
+ m := ceil(sqrt(p^grado-2));
+ lista := Matrix(m, 2);
+
+ lista[1, 1] := 1;
+ lista[1, 2] := 0;
+
+ for i to m-1 do
+	alfa := `mod`(Rem(g^(i*m), base, x), p);
+	lista[i+1, 1] := alfa;
+	lista[i+1, 2] := i;
+ end do;
+
+ inverso := inversoFqx(g, p, base);
+
+ #Numero que no esta en la lista
+ encontrado := m;
+ vuelta := -1;
+
+ while encontrado = m do
+	vuelta := vuelta+1;
+	bet := `mod`(Rem(h*inverso^vuelta, base, x), p);
+	for i to m do
+		if bet = lista[i, 1] then encontrado := lista[i, 2]; end if;
+	end do;
+	if m < vuelta then encontrado := m; end if;
+ end do;
+ result := encontrado*m+vuelta;
+
+ result;
+ end proc;

@@ -1,0 +1,51 @@
+# Genera la tabla de logaritmos para las distintas bases
+TablaLog := proc (base::polynom, p::integer, f::polynom)
+ local grado, i;
+ global tabla;
+
+ grado := degree(f, x);
+ tabla := Matrix(p^grado-1, 2);
+ for i to p^grado-1 do
+	tabla[i, 1] := i-1;
+	tabla[i, 2] := `mod`(Rem(base^(i-1), f, x), p);
+ end do;
+
+ tabla;
+ end proc;
+
+
+# Logaritmo discreto en Fq[x], q=p^n, p primo
+# g^x=h
+LogDiscreto := proc (g::polynom, y::polynom, p::integer, f::polynom)
+ local tabla, grado, i, result;
+
+ tabla := TablaLog(g, p, f);
+ grado := degree(f, x);
+
+ for i to p^grado-1 do
+	if tabla[i, 2] = y then result := i-1; end if;
+ end do;
+
+ result;
+ end proc;
+ 
+ 
+# Producto de polinomios usando el logaritmo discreto
+MultConLog := proc (dato1::polynom, dato2::polynom, p::integer, f::polynom)
+ local tabla, grado, ind1, ind2, i, aux, result, suma;
+
+ tabla := TablaLog(x, p, f);
+ grado := degree(f, x);
+
+ for i to p^grado-1 do
+	aux := tabla[i, 2];
+	if aux = dato1 then ind1 := tabla[i, 1]; end if;
+	if aux = dato2 then ind2 := tabla[i, 1]; end if;
+ end do;
+
+ suma := `mod`(ind1+ind2, p^grado-1);
+ #Porque empezamos en 0
+ result := tabla[suma+1, 2];
+
+ result;
+ end proc;
