@@ -1,0 +1,70 @@
+# Teorema Chino de los restos generalizado en Z
+# Algoritmos previos que utiliza: mcdZ (ver gcd.mws), mcdZextendido (ver extendedGcd.mws)
+tcrZ := proc (x::array, m::array)
+ local dim, y, flag, M, n, mcd, l, u, k, i, j;
+ flag := 0;
+ M := 1;
+ dim := upperbound(x);
+ if dim <> upperbound(m) then
+	y := "Los arrays deberían ser del mismo tamaño);
+ else
+	for i to dim do
+		M := M*m[i];
+		for j from i+1 to dim do
+			if mcdZ(m[i], m[j]) <> 1 then
+				y := "No hay solución";
+				flag := 1;
+			end if;
+		end do;
+	end do;
+	if flag <> 1 then
+		for i to dim do
+			n[i] := M/m[i];
+			mcd, l, u := mcdZextendido(m[i], n[i], 1);
+			k[i] := n[i]*u;
+		end do;
+		y := 0;
+		for i to dim do
+			y := y+(`mod`(x[i], m[i]))*k[i];
+		end do;
+		y := `mod`(y, M);
+	end if;
+ end if;
+ y;
+ end proc;
+ 
+ 
+# Teorema Chino de los restos generalizado en Fp[x], p primo
+# Algoritmos previos que utiliza: mcdFpx (ver gcd.mws), mcdFpxExtendido (ver extendedGcd.mws)
+tcrZpx := proc (g::array, f::array, p::integer)
+ local dim, h, flag, mcm, n, mcd, l, u, k, i, j;
+ flag := 0;
+ mcm := 1;
+ dim := upperbound(g);
+ if dim <> upperbound(f) then
+	h := "Los arrays deberían ser del mismo tamaño";
+ else
+	for i to dim do
+		mcm := mcm*f[i];
+		for j from i+1 to dim do
+			if mcdFpx(f[i], f[j], p) <> 1 then
+				h := "No hay solución";
+				flag := 1;
+			end if;
+		end do;
+	end do;
+	if flag <> 1 then
+		for i to dim do
+			n[i] := mcm/f[i];
+			mcd, l, u := mcdFpxExtendido(f[i], n[i], p, 1);
+			k[i] := n[i]*u;
+		end do;
+		h := 0;
+		for i to dim do
+			h := h+(`mod`(Rem(g[i], f[i], x), p))*k[i];
+		end do;
+		h := `mod`(Rem(h, mcm, x), p);
+	end if;
+ end if;
+ h;
+ end proc;
