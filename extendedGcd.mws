@@ -1,0 +1,104 @@
+# Algoritmo de Euclides extendido en Z
+mcdZextendido := proc (x::integer, y::integer, print::integer)::integer, integer, integer;
+ local dividendo, divisor, resto, cociente;
+ local s, sAnt, t, tAnt, tmp;
+ dividendo := 0; divisor := x; resto := y; s := 0; sAnt := 1; t := 1; tAnt := 0;
+ while resto <> 0 do
+	dividendo := divisor;
+	divisor := resto;
+	cociente := iquo(dividendo, divisor);
+	resto := irem(dividendo, divisor);
+	tmp := s;
+	s := sAnt-cociente*s;
+	sAnt := tmp;
+	tmp := t;
+	t := tAnt-cociente*t;
+	tAnt := tmp;
+ end do;
+ if print = 0 then printf("[%a] * [%a] + [%a] * [%a] = %a", x, sAnt, y, tAnt, divisor); end if;
+ (divisor, sAnt, tAnt);
+ end proc;
+ 
+ 
+# Algoritmo de Euclides extendido en Q[x]
+mcdQxExtendido := proc (f::polynom, g::polynom, print::integer)
+ local dividendo, divisor, resto, cociente, resultado;
+ local s, sAnt, t, tAnt, tmp;
+ dividendo := 0; divisor := f; resto := g;
+ s := 0; sAnt := 1; t := 1; tAnt := 0;
+ while resto <> 0 do
+	dividendo := divisor;
+	divisor := resto;
+	cociente := quo(dividendo, divisor, x);
+	resto := rem(dividendo, divisor, x);
+	tmp := s; s := sAnt-cociente*s;
+	sAnt := tmp;
+	tmp := t;
+	t := tAnt-cociente*t;
+	tAnt := tmp;
+ end do;
+ resultado := quo(divisor, lcoeff(divisor, x), x);
+ sAnt := sAnt/lcoeff(divisor);
+ tAnt := tAnt/lcoeff(divisor);
+ if print = 0 then printf("[%a] * [%a] + [%a] * [%a] = %a", f, sAnt, g, tAnt, resultado); end if;
+ (resultado, sAnt, tAnt);
+ end proc;
+ 
+ 
+# Algoritmo de Euclides extendido en Fp[x], p primo
+mcdFpxExtendido := proc (f::polynom, g::polynom, p::integer, print::integer)
+ local dividendo, divisor, resto, cociente, resultado;
+ local s, sAnt, t, tAnt, tmp;
+ dividendo := 0; divisor := `mod`(f, p); resto := `mod`(g, p);
+ s := 0; sAnt := 1; t := 1; tAnt := 0;
+ while resto <> 0 do
+	dividendo := divisor;
+	divisor := resto;
+	cociente := `mod`(Quo(dividendo, divisor, x), p);
+	resto := `mod`(Rem(dividendo, divisor, x), p);
+	tmp := s;
+	s := `mod`(sAnt-cociente*s, p);
+	sAnt := tmp;
+	tmp := t;
+	t := `mod`(tAnt-cociente*t, p);
+	tAnt := tmp;
+ end do;
+ tAnt := `mod`(expand(tAnt/lcoeff(divisor, x)), p);
+ sAnt := `mod`(expand(sAnt/lcoeff(divisor, x)), p);
+ resultado := `mod`(divisor/lcoeff(divisor, x), p);
+ if print = 0 then printf("[%a] * [%a] + [%a] * [%a] = %a", f, sAnt, g, tAnt, resultado); end if;
+ (resultado, sAnt, tAnt);
+ end proc;
+ 
+ 
+#Algoritmo de Euclides extendido en Fq[x], q=p^n, p primo
+mcdFqxExtendido := proc (f::polynom, g::polynom, p::integer, base::polynom, print::integer)
+ local dividendo, divisor, resto, cociente, resultado;
+ local s, sAnt, t, tAnt, tmp;
+ dividendo := 0; divisor := `mod`(f, p); resto := `mod`(g, p);
+ s := 0; sAnt := 1; t := 1; tAnt := 0;
+ while resto <> 0 do
+	dividendo := divisor;
+	divisor := resto;
+	cociente := `mod`(Quo(dividendo, divisor, x), p);
+	cociente := `mod`(Rem(cociente, base, x), p);
+	resto := `mod`(Rem(dividendo, divisor, x), p);
+	resto := `mod`(Rem(resto, base, x), p);
+	tmp := s;
+	s := `mod`(sAnt-cociente*s, p);
+	s := `mod`(Rem(s, base, x), p);
+	sAnt := tmp;
+	tmp := t;
+	t := `mod`(tAnt-cociente*t, p);
+	t := `mod`(Rem(t, base, x), p);
+	tAnt := tmp;
+ end do;
+ tAnt := `mod`(expand(tAnt/lcoeff(divisor, x)), p);
+ tAnt := `mod`(Rem(tAnt, base, x), p);
+ sAnt := `mod`(expand(sAnt/lcoeff(divisor, x)), p);
+ sAnt := `mod`(Rem(sAnt, base, x), p);
+ resultado := `mod`(divisor/lcoeff(divisor, x), p);
+ resultado := `mod`(Rem(resultado, base, x), p);
+ if print = 0 then printf("[%a] * [%a] + [%a] * [%a] = %a", f, sAnt, g, tAnt, resultado); end if;
+ (resultado, sAnt, tAnt);
+ end proc;
