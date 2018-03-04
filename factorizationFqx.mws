@@ -1,0 +1,496 @@
+# --------- Factorización libre de cuadrados en Fq[x] --------- #
+#Algoritmos previos que utiliza: mcdQx, mcdFqx, mcdFpx (ver gcd.mws)
+
+with(PolynomialTools)
+
+# Producto de arrays componente a componente
+multAux := proc (L1::Array, L2::Array)
+ local tam1, tam2, i;
+
+ tam1 := upperbound(L1);
+ tam2 := upperbound(L2);
+
+ if tam2 <= tam1 then
+	for i to tam2 do
+		L1[i] := L1[i]*L2[i];
+	end do;
+	L1;
+ else
+	for i to tam1 do
+		L2[i] := L1[i]*L2[i];
+	end do;
+	L2;
+ end if;
+
+ end proc;
+ 
+ 
+# Inserta unos entre los elementos del array original
+potAux := proc (L::Array, p::integer)
+ local result, tam, i, j, indice;
+
+ result := Array([]);
+ tam := upperbound(L);
+ indice := 1;
+
+ for i to tam do
+	for j to p-1 do
+		result(indice) := 1;
+		indice := indice+1;
+	end do;
+	result(indice) := L[i];
+	indice := indice+1;
+ end do;
+
+ result;
+ end proc;
+ 
+ 
+# Calcula la raíz p-esima de un polinommio, modulo p
+raizAux := proc (pol::polynom, p::integer)
+ local f, grado, gradoRaiz, incognitas, i, fRaiz, ladoIzquierdo, lEcuaciones, ecuaciones, solucion, lSolucion, result;
+
+ f := `mod`(pol, p);
+ grado := degree(f, x);
+ gradoRaiz := floor(grado/p)+1;
+ incognitas := [];
+ for i to gradoRaiz do
+	incognitas := [op(incognitas), a[i-1]];
+ end do;
+
+ fRaiz := FromCoefficientList(incognitas, x);
+ fRaiz := expand(fRaiz^p);
+ ladoIzquierdo := CoefficientList(f-fRaiz, x);
+ lEcuaciones := [];
+ for i to upperbound(ladoIzquierdo) do
+	lEcuaciones := [op(lEcuaciones), ladoIzquierdo[i] = 0];
+ end do;
+
+ ecuaciones := {op(lEcuaciones)};
+ solucion := msolve(ecuaciones, p);
+ lSolucion := [];
+ for i to upperbound(solucion) do
+	lSolucion := [op(lSolucion), rhs(solucion[i])];
+ end do;
+
+ result := FromCoefficientList(lSolucion, x);
+ result;
+ end proc;
+ 
+ 
+
+# FACTORIZACION LIBRE DE CUADRADOS EN Fq[x]
+squarefree := proc (f::polynom, p::integer, base::polynom)
+ local fp, g, result, i, L, g0, g0Ant, w0, w0Ant;
+
+ fp := `mod`(diff(f, x), p);
+
+ #Paso 1
+ if fp = 0 then
+	g := raizAux(f, p);
+	result := potAux(squarefree(expand(g), p, base), p);
+ #Paso 2
+ else
+	i := 0;
+	L := Array([]);
+	if base <> 1 then g0 := mcdFqx(f, fp, p, base);
+	else g0 := mcdFpx(f, fp, p); end if;
+	w0 := `mod`(Quo(f, g0, x), p);
+
+	while w0 <> 1 do
+		i := i+1;
+		
+		g0Ant := g0;
+		w0Ant := w0;
+
+		if base <> 1 then w0 := mcdFqx(g0Ant, w0Ant, p, base);
+		else w0 := mcdFpx(g0Ant, w0Ant, p); end if;
+		g0 := `mod`(Quo(g0Ant, w0, x), p);
+		L(i) := `mod`(Quo(w0Ant, w0, x), p);
+	end do;
+
+	if g0 = 1 then result := L;
+	else
+		g := raizAux(g0, p);
+		result := multAux(L, potAux(squarefree(expand(g), p, base), p));
+	end if;
+ end if;
+ result;
+ end proc;
+ 
+ 
+ # Pasa el array que devuelve squarefree a un conjunto sin los elementos que no pertenecen a Fq[x]
+ squarefreeOpt := proc (f::polynom, p::integer, base::polynom)
+ local lista, result, i;
+ lista := squarefree(f, p, base);
+ result := {};
+
+ for i to upperbound(lista) do
+	if 1 <= degree(lista[i], x) then result := result union {lista[i]}; end if;
+ end do;
+
+ result;
+ end proc;
+ 
+ 
+ 
+# --------- Factorización de distinto grado en Fq[x] --------- #
+# Algoritmos previos que utiliza: mcdFqx, mcdFpx (ver gcd.mws)
+
+# Factorización de distinto grado en Fq[x]
+distinctDegree := proc (f::polynom, p::integer, base::polynom)
+ local d, result, grado, g, h, q, fd;
+
+ d := 0;
+ grado := degree(f, x);
+ if base <> 1 then q := p^grado;
+ else q := p; end if;
+ result := {};
+ g := f;
+ h := x;
+ while d <= (1/2)*degree(g, x)-1 do
+	d := d+1;
+	h := `mod`(Rem(h^q, g, x), p);
+	if base <> 1 then fd := mcdFqx(g, h-x, p, base);
+	else fd := mcdFpx(g, h-x, p); end if;
+	if fd <> 1 then
+		result := result union {{d, fd}};
+	end if;
+	g := `mod`(Quo(g, fd, x), p);
+ end do;
+
+ if g <> 1 then
+	result := result union {{d, g}};
+ end if;
+
+ result;
+ end proc;
+ 
+ 
+ 
+# --------- Factorización del mismo grado en Fq[x] --------- #
+# Algoritmos previos que utiliza: mcdFqx, mcdFpx (ver gcd.mws)
+
+# Factorizacion del mismo grado en Fq[x]
+equalDegree := proc (f::polynom, d::integer, p::integer, base::polynom)
+ local q, factores, r, rnd, h, i, coef, vars, h1, g, fac, m, m2, elem, traza, vueltas;
+
+ if base = 1 then q := p;
+ else q := p^degree(base, x); end if;
+
+ factores := {f};
+ r := degree(f, x)/d;
+ coef := Vector(p);
+ vars := Vector(p);
+ for i to p do
+	vars[i] := x^(p-i);
+ end do;
+
+ while numelems(factores) < r do
+	elem := numelems(factores);
+	rnd := rand();
+	rnd := `mod`(rnd, elem);
+	rnd := rnd+1;
+	fac := op(rnd, factores);
+	while degree(fac, x) <= d do
+		rnd := rand();
+		rnd := `mod`(rnd, elem);
+		rnd := rnd+1;
+		fac := op(rnd, factores);
+	end do;
+	if p = 2 then
+		traza := 0;
+		if base = 1 then vueltas := 1;
+		else vueltas := degree(base, x); end if;
+		for i to vueltas do
+			traza := traza+x^(2^(i-1));
+		end do;
+		h1 := mcdFpx(fac, traza, p);
+	else
+		h := 0;
+		while h = 0 do
+			for i to p do
+				rnd := rand();
+				coef[i] := `mod`(rnd, p);
+			end do;
+			h := coef . vars;
+		end do;
+		h1 := expand(h^((1/2)*q^d-1/2)-1);
+	end if;
+	g := `mod`(Rem(h1, f, x), p);
+	m := mcdFpx(g, fac, p);
+	if m <> 1 and m <> fac then
+		factores := factores minus {fac};
+		m2 := `mod`(Quo(fac, m, x), p);
+		factores := factores union {m, m2};
+	end if;
+ end do;
+
+ factores;
+ end proc;
+ 
+ 
+ 
+# ----------------- Algoritmo de Berlekamp ----------------- # 
+# Algoritmos previos que utiliza: mcdFqx, mcdFpx (ver gcd.mws), testLibreCuadradosFpx, testLibreCuadradosFqx (ver squarefreeTest.mws)
+
+with(PolynomialTools);
+with(LinearAlgebra);
+
+#Berlekamp splitting
+berlekampSplitting := proc (f::polynom, h::Vector, p::integer, base::polynom)
+ local result, i, a, g;
+ result := 1;
+
+ if upperbound(h) = 1 then result := f;
+ else
+	i := 2;
+	while i <= upperbound(h) do
+		for a from 0 to p-1 do
+			if base <> 1 then g := mcdFqx(f, h[i]-a, p, base);
+			else g := mcdFpx(f, h[i]-a, p); end if;
+			if g <> 1 and g <> f then
+				return g;
+			end if;
+		end do;
+		i := i+1;
+	end do;
+ end if;
+
+ result;
+ end proc;
+ 
+ 
+# Calcula la matriz del kernel asociada
+matrizKer := proc (f::polynom, p::integer, base::polynom)
+ local grado, i, aux, coef, dim, matriz, j, q;
+ grado := degree(f, x);
+ matriz := Matrix(grado, grado);
+ if base = 1 then q := p;
+ else q := p^degree(base, x); end if;
+
+ for i from 0 to grado-1 do
+	if base = 1 then aux := `mod`(Rem(x^(i*q), f, x), p);
+	else
+		aux := `mod`(Rem(x^(i*q), f, x), p);
+		aux := `mod`(Rem(aux, base, x), p);
+	end if;
+	coef := CoefficientList(aux, x);
+	dim := upperbound(coef);
+	for j to dim do
+		matriz[i+1, j] := coef[j];
+	end do;
+ end do;
+
+ # Se resta la identidad
+ for i to grado do
+	matriz[i, i] := `mod`(matriz[i, i]-1, p);
+ end do;
+
+ matriz;
+ end proc;
+ 
+ 
+# Calcula la base del kernel asociada
+Ker := proc (f::polynom, p::integer, base::polynom)
+ local ker, matriz, base1, grado, i, dim, nucleo;
+
+ matriz := matrizKer(f, p, base);
+ grado := degree(f, x);
+ base1 := Vector(grado);
+ nucleo := `mod`(Nullspace(Transpose(matriz)), p);
+ dim := upperbound(nucleo);
+
+ for i from 0 to grado-1 do
+	base1[i+1] := x^i;
+ end do;
+
+ ker := Vector(dim);
+
+ for i to dim do
+	ker[i] := Transpose(base1) . nucleo[i];
+ end do;
+
+ ker;
+ end proc;
+ 
+ 
+#Algoritmo de Berlekamp
+miBerlekamp := proc (f::polynom, p::integer, base::polynom)
+ local result, ker, h, s, factores, irred, g, b, coec;
+
+ h := Ker(f, p, base);
+ s := upperbound(h);
+ factores := {f};
+ irred := {};
+
+ while numelems(factores)+numelems(irred) < s do
+	g := op(1, factores);
+	b := berlekampSplitting(g, h, p, base);
+	if b <> g then
+		factores := factores minus {g};
+		coec := `mod`(Quo(g, b, x), p);
+		factores := factores union {b, coec};
+	else
+		factores := factores minus {g};
+		irred := irred union {g};
+	end if;
+ end do;
+
+ result := factores union irred;
+ result;
+ end proc;
+ 
+ 
+# Optimiza el algoritmo de Berlekamp para devolver todos los factores del polinomio
+miBerlekampOpt := proc (f::polynom, p::integer, base::polynom)
+ local lista, i, elem, listaAux, listaAntigua, dim;
+
+ if base = 1 and testLibreCuadradosFpx(f, p) = 0 then lista := "El polinomio no es libre de cuadrados";
+ elif base <> 1 and testLibreCuadradosFqx(f, p, base) = 0 then lista := "El polinomio no es libre de cuadrados";
+ else
+
+	lista := miBerlekamp(f, p, base);
+	dim := numelems(lista);
+	i := 1;
+
+	while i <= dim do
+		elem := op(i, lista);
+		listaAux := miBerlekamp(elem, p, base);
+		listaAntigua := lista;
+		lista := lista union listaAux;
+		if listaAntigua <> lista then
+			i := 1;
+			lista := lista minus {elem};
+			dim := numelems(lista);
+		else i := i+1; end if;
+	end do;
+ end if;
+
+ lista;
+ end proc;
+ 
+ 
+ 
+# -------- Algoritmo de Berlekamp-Cantor-Zassenhaus -------- # 
+# Algoritmos previos que utiliza: mcdFqx, mcdFpx (ver gcd.mws), testLibreCuadradosFpx, testLibreCuadradosFqx (ver squarefreeTest.mws)
+
+with(PolynomialTools)
+with(LinearAlgebra)
+
+# Se utilizan los metodos matrizKer y ker, definidos mas arriba en este documento
+
+# Algoritmo de Berlekamp-Cantor-Zassenhaus
+BCZ := proc (f::polynom, p::integer, base::polynom)
+ local result, ker, h, s, g, b, w, coec, random, coef, aux1, i, q, elem, traza, vueltas;
+
+ if base = 1 and testLibreCuadradosFpx(f, p) = 0 then result := "El polinomio no es libre de cuadrados";
+ elif base <> 1 and testLibreCuadradosFqx(f, p, base) = 0 then result := "El polinomio no es libre de cuadrados";
+ else
+
+	if base = 1 then q := p;
+	else q := p^degree(base, x);
+	end if;
+
+	ker := matrizKer(f, p, base);
+	h := Ker(f, p, base);
+	s := upperbound(h);
+	result := {f};
+	coef := Vector(s);
+
+	while numelems(result) < s do
+		elem := numelems(result);
+		random := rand();
+		random := `mod`(random, elem);
+		random := random+1;
+		#Se elige uno al azar
+		g := op(random, result);
+		while degree(g, x) < 2 do
+			random := rand();
+			random := `mod`(random, elem);
+			random := random+1;
+			#Se elge uno al azar
+			g := op(random, result);
+		end do;
+
+		if p = 2 then
+			traza := 0;
+			if base = 1 then vueltas := 1;
+			else vueltas := degree(base, x); end if;
+			for i to vueltas do
+				traza := traza+x^(2^(i-1));
+			end do;
+			w := mcdFpx(g, traza, p);
+		else
+			b := 0;
+			while b = 0 do
+				for i to s do
+					random := rand();
+					random := `mod`(random, p);
+					coef[i] := random;
+				end do;
+				b := coef . h;
+			end do;
+
+			w := mcdFpx(g, b^((1/2)*q-1/2)-1, p);
+		end if;
+		if w <> 1 and w <> g then
+			result := result minus {g};
+			coec := `mod`(Quo(g, w, x), p);
+			result := result union {w, coec};
+		end if;
+	end do;
+ end if;
+
+ result;
+ end proc;
+ 
+ 
+ 
+# ---------------- Factorizacion en 2 pasos ---------------- # 
+# Se utilizan los metodos squarefree y miBerlekampOpt definidos mas arriba en este documento
+
+# Factorizacion en 2 pasos
+factorizacionDosPasos := proc (f::polynom, p::integer, base::polynom)
+ local L, pol, factores;
+
+ L := squarefreeOpt(f, p, base);
+ factores := {};
+
+ for pol in L do
+	factores := factores union miBerlekampOpt(pol, p, base);
+ end do;
+ end proc;
+ 
+ 
+ 
+# ---------------- Factorizacion en 3 pasos ---------------- # 
+# Se utilizan los metodos squarefree distinctDegree y equalDegree definidos mas arriba en este documento
+
+# Factorizacion en 3 pasos
+#f es monico y pertenece a Fq[x]-Fq
+factorizacionTresPasos := proc (f::polynom, p::integer, base::polynom)
+ local L, pol, factores1, factores, elem;
+
+ Paso 1
+ L := squarefreeOpt(f, p, base);
+ factores1 := {};
+ factores := {};
+
+ #Paso 2
+ for pol in L do
+	factores1 := factores1 union distinctDegree(f, p, base);
+ end do;
+
+ #Paso 3
+ for elem in factores1 do
+	factores := factores union equalDegree(elem[2], elem[1], p, base);
+ end do;
+
+ #Se quitan los elementos de Fq
+ for elem in factores do
+	if degree(elem, x) < 1 then factores := factores minus {elem}; end if;
+ end do;
+
+ factores;
+ end proc;
