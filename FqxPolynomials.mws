@@ -1,0 +1,65 @@
+# Polinomios en Fq[x]
+
+with(LinearAlgebra);
+
+# Calcula la base para el cuerpo Fq=Fp/f
+BaseFq := proc (f::polynom, p::integer)
+ local grado, i, aux;
+ global base;
+
+ grado := degree(f, x);
+ aux := 1;
+ base := Vector([]);
+
+ for i to grado do
+	base(i) := `mod`(aux+f, p);
+	aux := aux*x;
+ end do;
+
+ base;
+ end proc;
+
+ 
+# Calcula la matriz de todos los coeficientes para Fq=Fp/f
+MatrixFq := proc (p::integer, g::integer)
+ local i, j, coef;
+ global matriz;
+
+ matriz := Matrix(p^g, g);
+ coef := Vector([]);
+
+ for i to g do
+	coef(i) := 0;
+ end do;
+
+ for j to g do
+	for i to p^g do
+		matriz[i, j] := coef(j);
+		if `mod`(i, p^(g-j)) = 0 then
+			coef(j) := `mod`(coef(j)+1, p);
+		end if;
+	end do;
+ end do;
+
+ matriz;
+ end proc;
+
+# Calcula todos los elementos del cuerpo Fq=Fp/f
+Fq := proc (f::polynom, p::integer)
+ local grado, base, matriz, i, aux;
+ global valoresFq;
+
+ grado := degree(f, x);
+ base := BaseFq(f, p);
+ matriz := MatrixFq(p, grado);
+ valoresFq := `mod`(Multiply(matriz, base), p);
+
+ for i to p^grado do
+	aux := valoresFq[i];
+	valoresFq[i] := `mod`(Rem(aux, f, x), p);
+	#El print es para ver los valores cuando la matriz es muy grande
+	print(valoresFq[i]);
+ end do;
+
+ valoresFq;
+ end proc;
