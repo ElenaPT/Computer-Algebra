@@ -1,0 +1,66 @@
+# --------- Factorización del mismo grado en Fq[x] --------- #
+# ----------------- Test de primalidad AKS ----------------- #
+# Algoritmos previos que utiliza: mcdZ (ver gcd.mws)
+
+with(NumberTheory);
+
+# Exponenciacion binaria
+expBin := proc (a::polynom, n::integer)::integer;
+ local ret;
+
+ if n = 1 then
+	ret := a;
+ elif type(n, even) then
+	ret := expBin(a, (1/2)*n)^2;
+ else
+	ret := a*expBin(a, n-1);
+ end if;
+
+ ret;
+ end proc;
+
+
+# AKS 
+aks := proc (n::integer)
+ local b, a, r, mo;
+
+ # Paso 1
+ for b from 2 to evalf(log[2](n)) while n <> floor(root[b](n))^b do end do;
+ if n = floor(root[b](n))^b then
+	print("Es compuesto");
+	return;
+ end if;
+
+ # Paso 2
+ r := 2;
+ while mcdZ(n, r) <> 1 do r := r+1; end do;
+ while MultiplicativeOrder(n, r) <= evalf(log[2](n)) do
+	r := r+1;
+	while mcdZ(n, r) <> 1 do r := r+1; end do;
+ end do;
+
+ # Paso 3
+ for a to r while mcdZ(a, n) <= 1 or n <= mcdZ(a, n) do end do;
+ if a <= r then
+	print("Es compuesto");
+	return;
+ end if;
+
+ # Paso 4
+ if n <= r then
+	print("Es primo");
+	return;
+ end if;
+
+ #Paso 5
+ for a to floor(sqrt(Totient(r))*evalf(log[2](n))) do
+	if modpol((x+a)^n-x^n-a, x^r-1, x, n) <> 0 then
+		print("Es compuesto");
+		return;
+	end if;
+ end do;
+
+ # Paso 6
+ print("Es primo");
+
+ end proc; 
