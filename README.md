@@ -96,4 +96,4 @@ This file contains the **AKS primality test** (also known as Agrawal-Kayal-Saxen
 
 
 # Developers
-This project has been developed by [Elena Pérez Tirador](https://github.com/ElenaPT) and Beatriz Coronado Sanz for the course in Computer Algebra in Universidad Complutense de Madrid
+This project has been developed by [Elena Pérez Tirador](https://github.com/ElenaPT) and [Beatriz Coronado Sanz](https://github.com/Bea1995) for the course in Computer Algebra in Universidad Complutense de Madrid
